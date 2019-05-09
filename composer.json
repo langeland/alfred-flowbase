@@ -1,0 +1,21 @@
+{
+	"name": "langeland/alfred-flowbase",
+	"description": "Pico framework for Alfred workflows",
+	"license": "LGPL-3.0+",
+	"bin": [
+		"bin/workflow"
+	],
+	"autoload": {
+		"psr-4": {
+			"FlowBase\\": "src/"
+		}
+	},
+	"require": {
+    },
+	"require-dev": {
+	},
+	"suggest": {
+	},
+	"scripts": {
+	}
+}
