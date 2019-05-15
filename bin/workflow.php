@@ -2,10 +2,12 @@
 
 use FlowBase\Workflow as WorkflowAlias;
 
-if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
-    require __DIR__ . '/../vendor/autoload.php';
+$autoloader = __DIR__ . '/../../../autoload.php';
+
+if (file_exists($autoloader)) {
+    require $autoloader;
 } else {
-    echo 'Missing ' . __DIR__ . '/../vendor/autoload.php, update by the composer.' . PHP_EOL;
+    echo 'Missing ' . $autoloader . ', update by the composer.' . PHP_EOL;
     exit(2);
 }
 

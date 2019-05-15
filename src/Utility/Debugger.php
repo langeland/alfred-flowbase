@@ -8,7 +8,7 @@ class Debugger
 {
     const LOG_FILE = '~/FlowBase.log';
 
-    public static function log($message, $args = [], $inline = true)
+    public static function log($message, $args = [], $inline = false)
     {
 
         if ($args !== [] && $inline === true) {
@@ -17,11 +17,13 @@ class Debugger
             $message = $message . PHP_EOL . print_r($args, true) . PHP_EOL;
         }
 
-        $file = $_SERVER['HOME'] . '/FlowBase.log';
-        file_put_contents(
-            $file,
-            time() . ': ' . $message . PHP_EOL,
-            FILE_APPEND
-        );
+        fwrite(STDERR, $message . PHP_EOL);
+
+//        $file = $_SERVER['HOME'] . '/FlowBase.log';
+//        file_put_contents(
+//            $file,
+//            time() . ': ' . $message . PHP_EOL,
+//            FILE_APPEND
+//        );
     }
 }

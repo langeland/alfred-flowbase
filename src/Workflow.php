@@ -4,6 +4,8 @@
 namespace FlowBase;
 
 
+use FlowBase\Filter\FilterInterface;
+
 class Workflow
 {
 
@@ -16,8 +18,11 @@ class Workflow
 
     public function run()
     {
+        error_reporting(E_ALL ^ E_WARNING);
         try {
             $filter = $this->resolveFilter();
+            $filter->setEnvironment(new Environment());
+            $filter->initializeObject();
             $result = $filter->run(
                 $this->resolveQuery()
             );
@@ -25,7 +30,19 @@ class Workflow
             print($output);
             exit(0);
         } catch (\Exception $exception) {
-            \FlowBase\Utility\Debugger::log($exception->getMessage());
+
+            $items = [
+                'items' =>
+                    [
+                        [
+                            'title' => 'Workflow error',
+                            'subtitle' => 'Message: ' . $exception->getMessage(),
+                        ],
+                    ],
+            ];
+
+            echo json_encode($items);
+            \FlowBase\Utility\Debugger::log($exception->getMessage() . PHP_EOL . $exception->getTraceAsString());
             exit(1);
         }
     }
@@ -42,7 +59,7 @@ class Workflow
         return $query;
     }
 
-    private function resolveFilter()
+    private function resolveFilter(): FilterInterface
     {
         if (key_exists('filter', $this->arguments)) {
             $filterName = $this->arguments['filter'];

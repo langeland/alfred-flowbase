@@ -3,7 +3,8 @@
 	"description": "Pico framework for Alfred workflows",
 	"license": "LGPL-3.0+",
 	"bin": [
-		"bin/workflow"
+		"bin/workflow",
+		"bin/workflow.php"
 	],
 	"autoload": {
 		"psr-4": {
