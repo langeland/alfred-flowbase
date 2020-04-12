@@ -1,6 +1,6 @@
 <?php
 
-use FlowBase\Workflow as WorkflowAlias;
+use FlowBase\Workflow;
 
 $autoloader = __DIR__ . '/../../../autoload.php';
 
@@ -15,6 +15,6 @@ if(isset($arguments) === false) {
     $arguments = [];
 }
 
-$workflow = new WorkflowAlias($arguments);
+$workflow = new Workflow($arguments);
 $workflow->run();
 

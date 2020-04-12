@@ -1,8 +1,6 @@
 <?php
 
-
 namespace FlowBase;
-
 
 use FlowBase\Filter\FilterInterface;
 

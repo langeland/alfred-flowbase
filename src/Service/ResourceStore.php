@@ -2,32 +2,80 @@
 
 namespace FlowBase\Service;
 
+use FlowBase\Resource\ResourceInterface;
 use FlowBase\Utility\Debugger;
 
 class ResourceStore extends \SQLite3
 {
-    protected $resourceType;
 
-    function __construct(string $resourceType, $databaseName = 'ResourceStore')
+    /**
+     * @var string
+     */
+    protected $tableName;
+
+    /**
+     * @var array
+     */
+    protected $supportedResourceTypes = [];
+
+    /**
+     * ResourceStore constructor.
+     * @param array $supportedResourceTypes
+     * @param string $databaseName
+     * @param string $tableName
+     */
+    function __construct(array $supportedResourceTypes, $databaseName = 'ResourceStore', $tableName = 'Resource')
     {
-        $this->resourceType = $resourceType;
+        $this->tableName = $tableName;
+        $this->supportedResourceTypes = $supportedResourceTypes;
         $databaseFile = $_SERVER['alfred_workflow_data'] . '/' . $databaseName . '.db';
         $this->open($databaseFile);
 
-        $this->createTable(
-            $this->resourceType
-        );
+        $this->createTable();
     }
 
-    public function findOne(): \FlowBase\Resource\ResourceInterface
+    /**
+     * @return ResourceInterface
+     */
+    public function findOneBy($field, $value): \FlowBase\Resource\ResourceInterface
     {
+
     }
 
-    public function find(): \FlowBase\Resource\ResourceInterface
+    /**
+     * @return \FlowBase\Resource\ResourceInterface[]
+     */
+    public function findBy($field, $value): array
     {
+        if (is_numeric($value) === false) {
+            $value = '"' . $value . '"';
+        }
+        $where = $field . '=' . $value;
+
+        return $this->find($where);
     }
 
-    public function search($term)
+    /**
+     * @param $where
+     * @return \FlowBase\Resource\ResourceInterface[]
+     */
+    public function find($where): array
+    {
+        $results = $this->query(sprintf(
+            'select * from %s where %s',
+            $this->tableName,
+            $where
+        ));
+
+        $collection = $this->namalizeResult($results);
+        return $collection;
+    }
+
+    /**
+     * @param $term
+     * @return array
+     */
+    public function search($term): array
     {
         $termParts = explode(' ', $term);
         array_walk(
@@ -38,29 +86,69 @@ class ResourceStore extends \SQLite3
         );
         $where = implode(' AND ', $termParts);
 
-        $query = sprintf(
-            'select * from %s where %s',
-            $this->resolveTableName($this->resourceType),
-            $where
-        );
-
-        $results = $this->query($query);
-
-        $collection = array();
-        while ($result = $results->fetchArray(SQLITE3_ASSOC)) {
-            $resource = $this->resourceType::constructFromBase64($result['object']);
-            array_push($collection, $resource);
-        }
-
-        return $collection;
+        return $this->find($where);
     }
 
-    public function insertResource(\FlowBase\Resource\ResourceInterface $resource)
+    /**
+     *
+     */
+    public function destroy()
+    {
+        $this->exec('drop table if exists ' . $this->tableName);
+    }
+
+    /**
+     *
+     */
+    public function createTable()
+    {
+        $resourceFields = [];
+        /** @var ResourceInterface $supportedResourceType */
+        foreach ($this->supportedResourceTypes as $supportedResourceType) {
+            $resourceFields = array_merge(
+                $resourceFields,
+                $supportedResourceType::getStorageFields()
+            );
+        }
+
+        $resourceFields = array_merge(
+            [
+                'identifier' => 'TEXT',
+                'search' => 'BLOB',
+                'resourceClass' => 'TEXT',
+                'resourceData' => 'BLOB'
+            ],
+            $resourceFields
+        );
+
+        $fieldDefinitions = [];
+        foreach ($resourceFields as $resourceFieldName => $resourceFieldType) {
+            $fieldDefinitions[] = $resourceFieldName . ' ' . $resourceFieldType;
+        }
+
+        $query = sprintf(
+            'create table if not exists %s ( %s )',
+            $this->tableName,
+            implode(', ', $fieldDefinitions)
+        );
+
+        $execResult = $this->exec($query);
+        if ($execResult == false) {
+            Debugger::log('Error while inserting resource: ' . $resource->getIdentifier(), ['query' => $query]);
+        }
+
+    }
+
+    /**
+     * @param ResourceInterface $resource
+     */
+    public function insertResource(\FlowBase\Resource\ResourceInterface $resource): void
     {
         $dataFields = [
             'identifier' => $resource->getIdentifier(),
             'search' => ' ' . $resource->getSearchIndex() . ' ',
-            'object' => base64_encode(json_encode($resource))
+            'resourceClass' => get_class($resource),
+            'resourceData' => base64_encode(json_encode($resource))
         ];
 
         $storageFields = $resource::getStorageFields();
@@ -76,67 +164,33 @@ class ResourceStore extends \SQLite3
 
         $query = sprintf(
             'INSERT INTO %s (%s) VALUES(%s);',
-            $this->resolveTableName($resource),
+            $this->tableName,
             implode(', ', array_keys($dataFields)),
             implode(', ', array_values($dataFields))
         );
 
-        $this->exec($query);
+        $execResult = $this->exec($query);
+        if ($execResult == false) {
+            Debugger::log('Error while inserting resource: ' . $resource->getIdentifier(), ['query' => $query]);
+        }
     }
 
-    public function delete(\FlowBase\Resource\ResourceInterface $resource)
+    /**
+     * @param \SQLite3Result $result
+     * @return array
+     */
+    private function namalizeResult(\SQLite3Result $result): array
     {
-    }
-
-    public function deleteByIdentifier(string $resourceIdentifier)
-    {
-    }
-
-    public function destroy()
-    {
-        $this->exec('drop table if exists ' . $this->resolveTableName($this->resourceType));
-    }
-
-    public function createTable()
-    {
-        $tableFields = array_merge(
-            [
-                'identifier' => 'TEXT',
-                'search' => 'BLOB',
-                'object' => 'BLOB'
-            ],
-            $this->resourceType::getStorageFields()
-        );
-
-
-        $fieldDef = "";
-        $numFields = count($tableFields);
-        $inc = 1;
-
-        foreach ($tableFields as $field => $type) {
-            $fieldDef .= $field . " " . strtoupper($type);
-            if ($inc != $numFields) {
-                $fieldDef .= ', ';
-            }
-            $inc++;
+        $collection = array();
+        while ($resultRow = $result->fetchArray(SQLITE3_ASSOC)) {
+            $resourceClass = $resultRow['resourceClass'];
+            array_push(
+                $collection,
+                $resourceClass::constructFromBase64($resultRow['resourceData'])
+            );
         }
 
-        $query = sprintf(
-            'create table if not exists %s ( %s )',
-            $this->resolveTableName($this->resourceType),
-            $fieldDef
-        );
-
-        Debugger::log('createTable: ' . $query);
-        $this->exec($query);
-    }
-
-    private function resolveTableName($resource)
-    {
-        if (is_object($resource)) {
-            return substr(strrchr(get_class($resource), '\\'), 1);
-        }
-        return substr(strrchr($resource, '\\'), 1);
+        return $collection;
     }
 
     public function __destruct()
