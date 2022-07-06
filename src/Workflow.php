@@ -3,6 +3,7 @@
 namespace FlowBase;
 
 use FlowBase\Filter\FilterInterface;
+use FlowBase\Utility\Debugger;
 
 class Workflow
 {
@@ -57,7 +58,7 @@ class Workflow
         return $query;
     }
 
-    private function resolveFilter(): FilterInterface
+    private function resolveFilter()
     {
         if (key_exists('filter', $this->arguments)) {
             $filterName = $this->arguments['filter'];
@@ -72,6 +73,5 @@ class Workflow
         $filter = new $filterName();
         return $filter;
     }
-
 
 }

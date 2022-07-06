@@ -37,20 +37,25 @@ class ResourceStore extends \SQLite3
     /**
      * @return ResourceInterface
      */
-    public function findOneBy($field, $value): \FlowBase\Resource\ResourceInterface
+    public function findOneBy($field, $value, $resourceType = null): \FlowBase\Resource\ResourceInterface
     {
-
+        $resources = $this->findBy($field, $value, $resourceType);
+        return $resources[0];
     }
 
     /**
      * @return \FlowBase\Resource\ResourceInterface[]
      */
-    public function findBy($field, $value): array
+    public function findBy($field, $value, $resourceType = null): array
     {
         if (is_numeric($value) === false) {
             $value = '"' . $value . '"';
         }
         $where = $field . '=' . $value;
+
+        if($resourceType !== null){
+            $where = ' AND resourceClass' . '=' . $resourceType;
+        }
 
         return $this->find($where);
     }

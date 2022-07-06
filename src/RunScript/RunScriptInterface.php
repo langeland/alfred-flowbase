@@ -1,12 +1,10 @@
 <?php
 
-namespace FlowBase\Filter;
+namespace FlowBase\RunScript;
 
-interface FilterInterface
+interface RunScriptInterface
 {
-
     public function initializeObject();
     public function run($query);
     public function setEnvironment($environment);
-
 }

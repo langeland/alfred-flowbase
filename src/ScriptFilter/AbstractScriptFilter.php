@@ -1,10 +1,12 @@
 <?php
 
-namespace FlowBase\Filter;
+namespace FlowBase\ScriptFilter;
 
 use FlowBase\Environment;
+use FlowBase\Filter\ScriptFilterInterface;
+use FlowBase\Model\ScriptFilterResult;
 
-abstract class AbstractFilter
+abstract class AbstractScriptFilter
 {
 
     /**
@@ -14,7 +16,6 @@ abstract class AbstractFilter
 
     public function initializeObject()
     {
-        
     }
 
     public function setEnvironment($environment){
